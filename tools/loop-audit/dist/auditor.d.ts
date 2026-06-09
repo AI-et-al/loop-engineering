@@ -25,9 +25,23 @@ export interface LoopSignals {
     };
     safety: {
         loopMdMentionsSafety: boolean;
+        safetyDocPresent: boolean;
     };
     starters: {
         used: boolean;
+    };
+    github: {
+        present: boolean;
+        workflows: boolean;
+    };
+    mcp: {
+        present: boolean;
+    };
+    worktreeEvidence: {
+        present: boolean;
+    };
+    registry: {
+        present: boolean;
     };
 }
 export interface Finding {

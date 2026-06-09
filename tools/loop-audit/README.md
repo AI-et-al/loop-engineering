@@ -23,20 +23,29 @@ node tools/loop-audit/dist/cli.js starters/minimal-loop
 loop-audit .              # human-readable (default)
 loop-audit . --json       # machine-readable
 loop-audit . --md         # markdown report
+loop-audit . --suggest    # show copy-from-template commands for what's missing (highly recommended)
 ```
 
 Exit code `2` if score < 40 (useful for CI gates once your project is loop-ready).
 
-## Signals Checked
+The reference repo itself now ships `.github/workflows/audit.yml` that runs this on the starters + root on every PR/push.
 
-| Signal | Weight |
-|--------|--------|
-| State file (`STATE.md`, etc.) | High |
-| Triage skill | High |
-| Verifier skill (maker/checker) | High |
-| `LOOP.md` config | Medium |
-| `AGENTS.md` / project rules | Medium |
-| Safety gates documented | Low |
+## Signals Checked (v1.1+)
+
+| Signal                  | Notes |
+|-------------------------|-------|
+| State file              | STATE.md or pattern-specific |
+| Triage skill            | loop-triage / ci-triage / pr-review-triage etc. |
+| Verifier skill          | maker/checker split |
+| LOOP.md / config        | Cadence, limits, handoff |
+| AGENTS.md / CLAUDE.md   | Project conventions |
+| Safety docs             | safety.md + LOOP.md mentions of gates |
+| .github/ + workflows    | Dogfooding / automation |
+| MCP / connectors        | Mentions or config files |
+| Worktree evidence       | Isolation patterns in docs |
+| patterns/registry.yaml  | Machine index for tooling |
+
+Weights favor state + triage + verifier + safety + .github dogfooding.
 
 ## Levels
 

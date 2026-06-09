@@ -1,0 +1,48 @@
+name: Loop Readiness Audit (dogfood)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Daily-ish dogfood of the reference itself
+    - cron: '17 9 * * *'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tools/loop-audit/package-lock.json
+
+      - name: Build & run loop-audit on the reference + starters
+        run: |
+          cd tools/loop-audit
+          npm ci
+          npm run build
+          echo "=== Audit of repo root ==="
+          node dist/cli.js ../../ || true
+          echo ""
+          echo "=== Audit of starters ==="
+          for s in ../../starters/*/; do
+            echo "--- $(basename "$s") ---"
+            node dist/cli.js "$s" || true
+          done
+
+      - name: Fail on critically low score for this reference (adjust as we improve)
+        run: |
+          cd tools/loop-audit
+          node dist/cli.js ../../ --json > /tmp/audit.json || true
+          SCORE=$(node -e 'console.log(require("/tmp/audit.json").score)')
+          echo "Reference score: $SCORE"
+          # We expect the reference itself to be reasonably loop-ready
+          if (( $(echo "$SCORE < 45" | bc -l) )); then
+            echo "Reference score too low for a loop-engineering repo. Improve signals."
+            exit 2
+          fi

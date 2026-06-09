@@ -6,22 +6,29 @@ const args = process.argv.slice(2);
 const target = args.find((a) => !a.startsWith('-')) || '.';
 const json = args.includes('--json');
 const md = args.includes('--md');
+const suggest = args.includes('--suggest') || args.includes('--fix');
 const help = args.includes('--help') || args.includes('-h');
 
 if (help) {
-  console.log(`loop-audit — Loop Readiness Score CLI
+  console.log(`loop-audit — Loop Readiness Score CLI (v1.1+)
 
 Usage:
   loop-audit [path] [options]
 
 Options:
-  --json    JSON output
-  --md      Markdown output
-  --help    Show help
+  --json      JSON output (for CI / scripting)
+  --md        Markdown report
+  --suggest   Show copy-from-template commands for missing pieces (recommended on first runs)
+  --help, -h  This help
 
 Exit codes:
   0  score >= 40
-  2  score < 40 (early stage)
+  2  score < 40 (early stage or gate)
+
+Examples:
+  loop-audit .
+  loop-audit starters/minimal-loop --suggest
+  node tools/loop-audit/dist/cli.js . --json
 `);
   process.exit(0);
 }
@@ -31,6 +38,29 @@ try {
   if (json) console.log(formatJson(result));
   else if (md) console.log(formatMarkdown(result));
   else console.log(formatHuman(result));
+
+  if (suggest) {
+    console.log('\n=== Suggested actions (copy & customize) ===');
+    console.log('From the root of this repo (or after cloning the reference):');
+    console.log('');
+    console.log('  # Minimal L1 daily triage');
+    console.log('  cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/');
+    console.log('  cp starters/minimal-loop/STATE.md.example STATE.md');
+    console.log('  cp starters/minimal-loop/LOOP.md .');
+    console.log('');
+    console.log('  # Maker/checker verifier');
+    console.log('  mkdir -p .grok/skills/loop-verifier');
+    console.log('  cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md');
+    console.log('');
+    console.log('  # Common minimal fix action');
+    console.log('  mkdir -p .grok/skills/minimal-fix');
+    console.log('  cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md');
+    console.log('');
+    console.log('  # For PR babysitter / CI sweeper patterns, copy the corresponding starter');
+    console.log('  # Then run:  loop-audit . --suggest   (again after changes)');
+    console.log('');
+    console.log('See docs/loop-design-checklist.md and patterns/ for full guidance.');
+  }
 
   if (result.score < 40) process.exitCode = 2;
 } catch (err: unknown) {

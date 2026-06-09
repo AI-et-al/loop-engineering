@@ -49,3 +49,15 @@ patterns:
     state: post-merge-state.md
     phases: [scan-merges, prioritize, fix-small, ticket-large]
     human_gates: [architectural-debt, feature-flags, large-diffs]
+
+  - id: dependency-sweeper
+    name: Dependency Sweeper
+    file: dependency-sweeper.md
+    goal: Discover, safely apply, and verify dependency + vulnerability updates with human gates on risky changes
+    cadence: 6h-1d
+    risk: medium
+    tools: [grok, claude-code, codex, github-actions]
+    skills: [dependency-triage, minimal-fix, loop-verifier]
+    state: dependency-sweeper-state.md
+    phases: [scan, triage-risk, patch-safe, verify-worktree, escalate-risky]
+    human_gates: [major-bumps, high-sev-cve, denylisted-packages, max-attempts]

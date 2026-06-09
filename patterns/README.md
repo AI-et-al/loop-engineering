@@ -18,6 +18,7 @@ Each pattern answers:
 | Daily Triage | 1d–2h | Low | [daily-triage.md](./daily-triage.md) |
 | CI Sweeper | 5–15m | Medium | [ci-sweeper.md](./ci-sweeper.md) |
 | Post-Merge Cleanup | 1d–6h | Low | [post-merge-cleanup.md](./post-merge-cleanup.md) |
+| Dependency Sweeper | 6h–1d | Medium | [dependency-sweeper.md](./dependency-sweeper.md) |
 
 Machine-readable index: [registry.yaml](./registry.yaml)
 

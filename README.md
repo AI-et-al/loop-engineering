@@ -7,6 +7,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/cobusgreyling/loop-engineering/actions/workflows/audit.yml"><img src="https://img.shields.io/github/actions/workflow/status/cobusgreyling/loop-engineering/audit.yml?label=loop-audit%20dogfood" alt="loop-audit dogfood"></a>
+  <a href="https://github.com/cobusgreyling/loop-engineering/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+  <a href="https://cobusgreyling.github.io/loop-engineering/"><img src="https://img.shields.io/badge/GitHub_Pages-live-3ee8c5" alt="Pages"></a>
+</p>
+
+<p align="center">
   <strong><a href="https://cobusgreyling.github.io/loop-engineering/">→ cobusgreyling.github.io/loop-engineering</a></strong>
 </p>
 
@@ -54,6 +60,25 @@ The leverage point has moved from crafting individual prompts to designing the c
 
 Full detail: [docs/primitives.md](docs/primitives.md) · Cross-tool matrix: [docs/primitives-matrix.md](docs/primitives-matrix.md)
 
+### Anatomy of a Loop (Mermaid)
+
+```mermaid
+flowchart LR
+    A[Schedule / Automation] --> B[Triage Skill]
+    B --> C[Read + Write STATE / Memory]
+    C --> D[Isolated Worktree]
+    D --> E[Implementer Sub-agent]
+    E --> F[Verifier Sub-agent<br/>tests + gates]
+    F --> G[MCP / Git / Tickets]
+    G --> H{Human Gate?}
+    H -->|safe / allowlisted| I[Commit / PR / Action]
+    H -->|risky / ambiguous| J[Escalate to human<br/>with full context]
+    I --> A
+    J --> A
+```
+
+**This reference repo now runs its own `validate-patterns` + `audit` workflows on every push/PR** (see `.github/workflows/`). We also added `LOOP.md` describing the loops that will maintain it.
+
 ## Patterns
 
 | Pattern | Cadence | Starter |
@@ -62,6 +87,7 @@ Full detail: [docs/primitives.md](docs/primitives.md) · Cross-tool matrix: [doc
 | [Daily Triage](patterns/daily-triage.md) | 1d–2h | [starters/minimal-loop](starters/minimal-loop/) |
 | [CI Sweeper](patterns/ci-sweeper.md) | 5–15m | [starters/ci-sweeper](starters/ci-sweeper/) |
 | [Post-Merge Cleanup](patterns/post-merge-cleanup.md) | 1d–6h | — |
+| [Dependency Sweeper](patterns/dependency-sweeper.md) | 6h–1d | [starters/dependency-sweeper](starters/dependency-sweeper/) |
 
 Machine-readable index: [patterns/registry.yaml](patterns/registry.yaml)
 

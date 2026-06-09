@@ -1,0 +1,42 @@
+name: Validate Patterns & Registry
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check registry covers all pattern files
+        run: |
+          set -e
+          echo "Patterns declared in registry:"
+          grep '^\s*-\s*id:' patterns/registry.yaml | sed 's/.*id: //' | sort > /tmp/registry.txt
+          echo "Pattern markdown files:"
+          ls patterns/*.md | xargs -n1 basename | sed 's/.md$//' | grep -v README | sort > /tmp/files.txt
+          echo "=== Registry ==="; cat /tmp/registry.txt
+          echo "=== Files ==="; cat /tmp/files.txt
+          comm -23 /tmp/files.txt /tmp/registry.txt | grep . && (echo "ERROR: pattern md file(s) missing from registry.yaml"; exit 1) || echo "All pattern files registered ✓"
+          comm -23 /tmp/registry.txt /tmp/files.txt | grep . && (echo "ERROR: registry entry without matching .md"; exit 1) || echo "No orphan registry entries ✓"
+
+      - name: Verify CONTRIBUTING + template compliance (basic)
+        run: |
+          echo "Checking that key sections exist in patterns (lightweight)"
+          for f in patterns/*.md; do
+            if [[ "$f" == *"README.md" ]]; then continue; fi
+            grep -q "^## Scheduling" "$f" || (echo "Missing Scheduling in $f"; exit 1)
+            grep -q "^## Required Skills" "$f" || (echo "Missing Required Skills in $f"; exit 1)
+            grep -q "maker.*checker\|verifier\|Maker / Checker" "$f" || (echo "Missing verifier strategy in $f"; exit 1)
+          done
+          echo "Basic pattern structure checks passed ✓"
+
+      - name: Ensure templates exist
+        run: |
+          test -f templates/pattern-template.md || (echo "Missing pattern-template.md"; exit 1)
+          test -f templates/STATE.md.template || (echo "Missing STATE template"; exit 1)
+          echo "Templates present ✓"

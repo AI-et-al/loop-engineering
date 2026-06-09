@@ -8,6 +8,8 @@ Real-world loop engineering — including failures. Contribute yours via [CONTRI
 | [daily-triage-report-only.md](./daily-triage-report-only.md) | Daily Triage | L1 before L2 |
 | [why-we-killed-ci-sweeper.md](./why-we-killed-ci-sweeper.md) | CI Sweeper | Budget, branch allowlist, kill switch |
 
+New high-value pattern looking for a story: **Dependency Sweeper** (volume + safety boundaries + measurable "time to clean" metrics).
+
 **Template for new stories:**
 
 ```markdown

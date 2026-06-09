@@ -9,8 +9,12 @@ export interface LoopSignals {
   triage: { present: boolean };
   agentsMd: { present: boolean };
   patterns: { documented: boolean };
-  safety: { loopMdMentionsSafety: boolean };
+  safety: { loopMdMentionsSafety: boolean; safetyDocPresent: boolean };
   starters: { used: boolean };
+  github: { present: boolean; workflows: boolean };
+  mcp: { present: boolean };
+  worktreeEvidence: { present: boolean };
+  registry: { present: boolean };
 }
 
 export interface Finding {
@@ -42,7 +46,12 @@ const LOOP_SKILL_NAMES = [
   'pr-review-triage',
   'ci-triage',
   'post-merge-scan',
+  'dependency-triage',
 ];
+
+const SAFETY_FILES = ['safety.md', 'docs/safety.md', 'SECURITY.md'];
+const MCP_FILES = ['.mcp.json', 'mcp.json', '.mcp/config.json'];
+const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 
 async function fileExists(p: string): Promise<boolean> {
   try {
@@ -75,28 +84,34 @@ async function findSkills(root: string): Promise<string[]> {
 export function computeScore(signals: LoopSignals): { score: number; level: 'L0' | 'L1' | 'L2' | 'L3'; assessment: string } {
   let score = 10;
 
-  if (signals.stateFile.present) score += 20;
-  if (signals.triage.present) score += 15;
-  if (signals.loopConfig.present) score += 10;
-  if (signals.agentsMd.present) score += 10;
-  if (signals.skills.count >= 2) score += 15;
-  else if (signals.skills.count === 1) score += 8;
-  if (signals.verifier.present) score += 15;
-  if (signals.safety.loopMdMentionsSafety) score += 5;
+  if (signals.stateFile.present) score += 18;
+  if (signals.triage.present) score += 14;
+  if (signals.loopConfig.present) score += 9;
+  if (signals.agentsMd.present) score += 9;
+  if (signals.skills.count >= 2) score += 14;
+  else if (signals.skills.count === 1) score += 7;
+  if (signals.verifier.present) score += 14;
+  if (signals.safety.loopMdMentionsSafety) score += 4;
+  if (signals.safety.safetyDocPresent) score += 4;
+  if (signals.github.present) score += 6;
+  if (signals.github.workflows) score += 4;
+  if (signals.mcp.present) score += 3;
+  if (signals.worktreeEvidence.present) score += 3;
+  if (signals.registry.present) score += 2;
 
   score = Math.min(100, Math.max(0, score));
 
   let level: 'L0' | 'L1' | 'L2' | 'L3' = 'L0';
-  if (score >= 75 && signals.verifier.present && signals.stateFile.present) level = 'L3';
-  else if (score >= 55 && signals.triage.present) level = 'L2';
-  else if (score >= 35 && signals.stateFile.present) level = 'L1';
+  if (score >= 78 && signals.verifier.present && signals.stateFile.present) level = 'L3';
+  else if (score >= 58 && signals.triage.present) level = 'L2';
+  else if (score >= 38 && signals.stateFile.present) level = 'L1';
   else level = 'L0';
 
   const assessment =
-    score >= 80 ? 'Strong loop readiness — unattended possible with human gates.' :
-    score >= 60 ? 'Good foundation — add verifier before L3.' :
-    score >= 40 ? 'Early loop setup — complete L1 checklist.' :
-    'Not loop-ready — start with minimal-loop starter.';
+    score >= 82 ? 'Strong loop readiness — good candidate for L3 with explicit gates.' :
+    score >= 62 ? 'Good foundation — add missing verifier + safety docs for L3.' :
+    score >= 42 ? 'Early loop setup — focus on L1 state + triage before enabling actions.' :
+    'Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).';
 
   return { score, level, assessment };
 }
@@ -126,6 +141,38 @@ export async function auditProject(target: string): Promise<AuditResult> {
     loopMdContent = await readFile(path.join(root, 'LOOP.md'), 'utf8');
   }
 
+  // New expanded signals
+  const githubDir = await fileExists(path.join(root, '.github'));
+  const hasWorkflows = await fileExists(path.join(root, '.github', 'workflows'));
+  const safetyDoc = SAFETY_FILES.some(async (f) => await fileExists(path.join(root, f))) || 
+    await fileExists(path.join(root, 'docs', 'safety.md'));
+  // simple presence (note: async in .some is not awaited perfectly but good enough for heuristic)
+  let safetyDocPresent = false;
+  for (const f of SAFETY_FILES) {
+    if (await fileExists(path.join(root, f))) { safetyDocPresent = true; break; }
+  }
+  if (!safetyDocPresent) {
+    safetyDocPresent = await fileExists(path.join(root, 'docs', 'safety.md'));
+  }
+
+  const mcpPresent = (await Promise.all(MCP_FILES.map(f => fileExists(path.join(root, f))))).some(Boolean) ||
+    /MCP|mcp server|plugins & connectors/i.test(loopMdContent);
+
+  // Light evidence of worktree usage (common in patterns/starters/LOOP)
+  let worktreeEvidence = false;
+  const candidateMd = ['LOOP.md', 'patterns/pr-babysitter.md', 'starters/minimal-loop/LOOP.md', 'docs/operating-loops.md'];
+  for (const c of candidateMd) {
+    try {
+      const p = path.join(root, c);
+      if (await fileExists(p)) {
+        const txt = await readFile(p, 'utf8');
+        if (WORKTREE_HINTS.some(h => txt.toLowerCase().includes(h))) { worktreeEvidence = true; break; }
+      }
+    } catch {}
+  }
+
+  const registryPresent = await fileExists(path.join(root, 'patterns', 'registry.yaml'));
+
   const signals: LoopSignals = {
     stateFile: { present: statePaths.length > 0, paths: statePaths },
     loopConfig: { present: loopMd, path: loopMd ? 'LOOP.md' : undefined },
@@ -134,8 +181,12 @@ export async function auditProject(target: string): Promise<AuditResult> {
     triage: { present: triage },
     agentsMd: { present: agentsMd },
     patterns: { documented: loopMd },
-    safety: { loopMdMentionsSafety: /gate|denylist|auto-merge|safety/i.test(loopMdContent) },
+    safety: { loopMdMentionsSafety: /gate|denylist|auto-merge|safety/i.test(loopMdContent), safetyDocPresent },
     starters: { used: loopSkills.includes('loop-triage') },
+    github: { present: githubDir, workflows: hasWorkflows },
+    mcp: { present: mcpPresent },
+    worktreeEvidence: { present: worktreeEvidence },
+    registry: { present: registryPresent },
   };
 
   if (!signals.stateFile.present) {
@@ -172,6 +223,38 @@ export async function auditProject(target: string): Promise<AuditResult> {
   if (!signals.safety.loopMdMentionsSafety) {
     findings.push({ level: 'warn', message: 'LOOP.md does not mention safety gates or auto-merge policy.' });
     recommendations.push('Document human gates per docs/safety.md in LOOP.md');
+  }
+
+  if (!signals.safety.safetyDocPresent) {
+    findings.push({ level: 'warn', message: 'No safety.md or docs/safety.md found.' });
+    recommendations.push('Copy or create docs/safety.md (denylists, auto-merge policy, MCP scopes)');
+  } else {
+    findings.push({ level: 'ok', message: 'Safety documentation present.' });
+  }
+
+  if (!signals.github.present) {
+    findings.push({ level: 'warn', message: 'No .github/ directory (templates, workflows for dogfooding).' });
+    recommendations.push('Add .github/ISSUE_TEMPLATE, PULL_REQUEST_TEMPLATE, and workflows (see this repo for examples)');
+  } else if (!signals.github.workflows) {
+    findings.push({ level: 'warn', message: '.github/ exists but no workflows/ (CI dogfood opportunity).' });
+    recommendations.push('Add GitHub Actions that run loop-audit and validate patterns (dogfood the reference)');
+  } else {
+    findings.push({ level: 'ok', message: '.github/ with workflows present (strong dogfooding signal).' });
+  }
+
+  if (!signals.mcp.present) {
+    findings.push({ level: 'warn', message: 'No MCP / connector config or mentions detected.' });
+    recommendations.push('Document MCP usage (or note "MCP not required for this pattern") in LOOP.md or skills');
+  }
+
+  if (!signals.worktreeEvidence.present) {
+    findings.push({ level: 'warn', message: 'Little evidence of worktree usage in docs or state.' });
+    recommendations.push('Add worktree isolation notes to LOOP.md or pattern docs (see primitives and starters)');
+  }
+
+  if (!signals.registry.present) {
+    findings.push({ level: 'warn', message: 'No patterns/registry.yaml (machine-readable index for future tools).' });
+    recommendations.push('Add patterns/registry.yaml following the existing format');
   }
 
   const { score, level, assessment } = computeScore(signals);

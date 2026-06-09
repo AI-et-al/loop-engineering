@@ -22,6 +22,7 @@ export function formatHuman(r: AuditResult): string {
   }
   lines.push('');
   lines.push('Docs: docs/loop-design-checklist.md');
+  lines.push('Tip: rerun with --suggest for ready-to-paste copy commands from templates/starters.');
   lines.push('');
   return lines.join('\n');
 }
