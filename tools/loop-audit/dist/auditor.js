@@ -104,6 +104,27 @@ async function findSkills(root) {
             }
         }
     }
+    // Opencode named agents in opencode.json (or the starter example before rename)
+    for (const configName of ['opencode.json', 'opencode.json.example']) {
+        const configPath = path.join(root, configName);
+        if (!(await fileExists(configPath)))
+            continue;
+        try {
+            const raw = await readFile(configPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            const agents = parsed.agent ?? {};
+            for (const [key, def] of Object.entries(agents)) {
+                const name = (def?.name ?? key).toLowerCase();
+                if (name.includes('verifier') || key.toLowerCase().includes('verifier')) {
+                    found.push('loop-verifier');
+                    break;
+                }
+            }
+        }
+        catch {
+            // ignore invalid JSON
+        }
+    }
     return found;
 }
 async function detectLoopActivity(root) {
@@ -377,7 +398,7 @@ export async function auditProject(target) {
     }
     if (!signals.verifier.present) {
         findings.push({ level: 'warn', message: 'No loop-verifier skill — maker/checker split incomplete.' });
-        recommendations.push('Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml');
+        recommendations.push('Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, .codex/agents/verifier.toml, or a verifier agent in opencode.json');
     }
     else {
         findings.push({ level: 'ok', message: 'Verifier skill present.' });

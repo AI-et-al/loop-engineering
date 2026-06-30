@@ -4,7 +4,13 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
 
 ## Quick Start
 
-1. Copy files into your repo:
+1. Scaffold (recommended):
+
+   ```bash
+   npx @cobusgreyling/loop-init . --pattern daily-triage --tool opencode
+   ```
+
+   Or copy manually:
 
    ```bash
    cp -r starters/minimal-loop-opencode/skills .
