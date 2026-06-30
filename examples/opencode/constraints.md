@@ -29,23 +29,19 @@ opencode run "Run skills/loop-constraints/SKILL.md. Then run skills/loop-triage/
 
 ## Scaffold automatically
 
-Opencode doesn't ship a `loop-init` scaffolder yet. Copy the templates:
+```bash
+npx @cobusgreyling/loop-init . --pattern daily-triage --tool opencode
+```
+
+`loop-init` copies `loop-constraints.md` and `skills/loop-constraints/SKILL.md` into the repo root layout opencode expects.
+
+Manual copy still works:
 
 ```bash
 mkdir -p skills/loop-constraints
 cp templates/SKILL.md.loop-constraints skills/loop-constraints/SKILL.md
 cp templates/loop-constraints.md loop-constraints.md
 ```
-
-Or use the cross-tool scaffolder and import the generated files:
-
-```bash
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool claude  # generates SKILLs
-mkdir -p skills
-cp -r .claude/skills/* skills/    # adapt comments for opencode if needed
-```
-
-Both paths land at the same shape: a `loop-constraints.md` file you can edit by hand.
 
 ## Safety
 
